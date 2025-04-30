@@ -2,7 +2,7 @@
 
 This is made so that you can give folder info to GPT
 
-Try it live: [File List Generator](https://rawcdn.githack.com/EmptyDeck/FileTreeGenerator/refs/heads/main/web.html?token=GHSAT0AAAAAAC7UTPUJJ5UWHFKZZAOTTWR62ARRVDQ)
+Try it live:   👉  [File List Generator](https://rawcdn.githack.com/EmptyDeck/FileTreeGenerator/refs/heads/main/web.html?token=GHSAT0AAAAAAC7UTPUJJ5UWHFKZZAOTTWR62ARRVDQ)   👈
 
 ## Features
 

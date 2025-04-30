@@ -170,7 +170,7 @@
             console.time('selectFolder');
             console.log('Starting folder selection');
             resetCopyButtonColor();
-            showLoadingSpinner(); // Show loading spinner
+            showLoadingSpinner();
 
             const input = document.createElement('input');
             input.type = 'file';
@@ -266,7 +266,7 @@
             console.log('Copy button clicked');
             const text = output.textContent;
             if (text === 'No list generated.') {
-                alert('No text to copy.');
+                console.log('No text to copy');
                 return;
             }
 
@@ -277,7 +277,6 @@
             navigator.clipboard.writeText(text)
                 .then(() => {
                     console.log('Text copied successfully via clipboard API');
-                    alert('Output copied to clipboard!');
                 })
                 .catch(err => {
                     console.log('Clipboard API failed, attempting fallback:', err);
@@ -288,10 +287,8 @@
                     try {
                         document.execCommand('copy');
                         console.log('Text copied successfully via execCommand');
-                        alert('Output copied to clipboard!');
                     } catch (fallbackErr) {
                         console.error('Failed to copy text:', fallbackErr);
-                        alert('Failed to copy text. Please copy manually from the output box.');
                     }
                     document.body.removeChild(textarea);
                 });

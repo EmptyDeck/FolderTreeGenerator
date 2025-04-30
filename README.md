@@ -1,4 +1,4 @@
-# File List Generator
+# Folder Tree List Generator
 
 This is made so that you can give folder info to GPT
 

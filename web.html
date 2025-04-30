@@ -1,43 +1,4 @@
-<script type="text/javascript">
-        var gk_isXlsx = false;
-        var gk_xlsxFileLookup = {};
-        var gk_fileData = {};
-        function filledCell(cell) {
-          return cell !== '' && cell != null;
-        }
-        function loadFileData(filename) {
-        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
-            try {
-                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
-                var firstSheetName = workbook.SheetNames[0];
-                var worksheet = workbook.Sheets[firstSheetName];
-
-                // Convert sheet to JSON to filter blank rows
-                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
-                // Filter out blank rows (rows where all cells are empty, null, or undefined)
-                var filteredData = jsonData.filter(row => row.some(filledCell));
-
-                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
-                var headerRowIndex = filteredData.findIndex((row, index) =>
-                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
-                );
-                // Fallback
-                if (headerRowIndex === -1 || headerRowIndex > 25) {
-                  headerRowIndex = 0;
-                }
-
-                // Convert filtered JSON back to CSV
-                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
-                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
-                return csv;
-            } catch (e) {
-                console.error(e);
-                return "";
-            }
-        }
-        return gk_fileData[filename] || "";
-        }
-        </script><!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -91,7 +52,8 @@
         </div>
         
         <div class="mt-4">
-            <pre id="output" class="bg-gray-50 p-4 rounded max-h-96 overflow-auto">No list generated.</pre>
+            <div id="loadingSpinner" class="hidden w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
+            <pre id="output" class="bg-gray-50 p-4 rounded max-h-96 overflow-auto mt-2">No list generated.</pre>
         </div>
     </div>
 
@@ -104,6 +66,7 @@
         const ignoreExtensions = document.getElementById('ignoreExtensions');
         const selectedFolder = document.getElementById('selectedFolder');
         const output = document.getElementById('output');
+        const loadingSpinner = document.getElementById('loadingSpinner');
 
         // Folder comment mapping
         const folderComments = {
@@ -125,8 +88,20 @@
             console.log('Copy button color reverted to original');
         }
 
+        // Loading spinner control
+        function showLoadingSpinner() {
+            loadingSpinner.style.display = 'block';
+            console.log('Loading spinner displayed');
+        }
+
+        function hideLoadingSpinner() {
+            loadingSpinner.style.display = 'none';
+            console.log('Loading spinner hidden');
+        }
+
         // Build tree structure from files
         function buildTree(files) {
+            console.time('buildTree');
             const tree = { name: '', children: [], files: [] };
             for (const file of files) {
                 if (!file.webkitRelativePath || !file.name) {
@@ -148,11 +123,13 @@
                 }
                 current.files.push(file.name);
             }
+            console.timeEnd('buildTree');
             return tree;
         }
 
         // Convert tree to string
         function treeToString(tree, prefix = '', isLast = true) {
+            console.time('treeToString');
             const lines = [];
             const baseName = tree.name || selectedFolder.textContent.replace('Selected folder: ', '') || 'Project';
             if (prefix === '') {
@@ -185,25 +162,31 @@
                 lines.push(`${prefix}${connector}${file}`);
             });
 
+            console.timeEnd('treeToString');
             return lines;
         }
 
         selectFolderBtn.addEventListener('click', () => {
+            console.time('selectFolder');
             console.log('Starting folder selection');
-            resetCopyButtonColor(); // Reset Copy button color
+            resetCopyButtonColor();
+            showLoadingSpinner(); // Show loading spinner
+
             const input = document.createElement('input');
             input.type = 'file';
             input.webkitdirectory = true;
             input.multiple = true;
 
-            input.addEventListener('change', async () => {
+            input.addEventListener('change', () => {
                 console.log('Folder selection dialog opened, awaiting user input');
                 const files = Array.from(input.files);
-                console.log('Selected files:', files.map(f => f.name || 'undefined'));
+                console.log(`Selected files: ${files.length}`);
 
                 if (files.length === 0) {
                     console.log('No files selected');
                     output.textContent = 'No folder or files selected.';
+                    hideLoadingSpinner();
+                    console.timeEnd('selectFolder');
                     return;
                 }
 
@@ -212,11 +195,14 @@
                 selectedFolder.textContent = `Selected folder: ${basePath}`;
 
                 // Apply filters
-                const ignoreExts = ignoreExtensions.value
-                    .split(',')
-                    .map(ext => ext.trim().replace(/^\.+/, '').toLowerCase())
-                    .filter(ext => ext);
-                console.log('Ignore extensions:', ignoreExts);
+                console.time('filtering');
+                const ignoreExts = new Set(
+                    ignoreExtensions.value
+                        .split(',')
+                        .map(ext => ext.trim().replace(/^\.+/, '').toLowerCase())
+                        .filter(ext => ext)
+                );
+                console.log('Ignore extensions:', Array.from(ignoreExts));
 
                 const filteredFiles = files.filter(file => {
                     const name = file.name;
@@ -228,7 +214,7 @@
                         console.log(`Ignoring hidden file: ${name}`);
                         return false;
                     }
-                    if (ignoreExts.length > 0 && ignoreExts.some(ext => {
+                    if (ignoreExts.size > 0 && Array.from(ignoreExts).some(ext => {
                         const match = name.toLowerCase().endsWith(`.${ext}`);
                         if (match) console.log(`Ignoring file with extension: ${name}`);
                         return match;
@@ -237,9 +223,10 @@
                     }
                     return true;
                 });
+                console.timeEnd('filtering');
 
                 if (!includeSubfolders.checked) {
-                    // Only top-level files
+                    console.time('topLevel');
                     const topLevelFiles = filteredFiles
                         .filter(file => !file.webkitRelativePath.includes('/', file.webkitRelativePath.indexOf('/') + 1))
                         .map(file => file.name)
@@ -248,6 +235,9 @@
                     const result = topLevelFiles.join('\n');
                     console.log(`List generation completed, text length: ${result.length}`);
                     output.textContent = result || 'No files found.';
+                    hideLoadingSpinner();
+                    console.timeEnd('topLevel');
+                    console.timeEnd('selectFolder');
                     return;
                 }
 
@@ -256,6 +246,8 @@
                 const result = treeToString(tree).join('\n');
                 console.log(`List generation completed, text length: ${result.length}`);
                 output.textContent = result || 'No files found.';
+                hideLoadingSpinner();
+                console.timeEnd('selectFolder');
             });
 
             input.click();
@@ -264,9 +256,10 @@
 
         resetOutputBtn.addEventListener('click', () => {
             console.log('Resetting output');
-            resetCopyButtonColor(); // Reset Copy button color
+            resetCopyButtonColor();
             output.textContent = 'No list generated.';
             selectedFolder.textContent = 'Select a folder';
+            hideLoadingSpinner();
         });
 
         copyOutputBtn.addEventListener('click', () => {
@@ -277,7 +270,6 @@
                 return;
             }
 
-            // Change button color to dark green
             copyOutputBtn.classList.remove('bg-green-500', 'hover:bg-green-600');
             copyOutputBtn.classList.add('bg-green-800');
             console.log('Copy button color changed to dark green');
@@ -289,7 +281,6 @@
                 })
                 .catch(err => {
                     console.log('Clipboard API failed, attempting fallback:', err);
-                    // Fallback: Use textarea for copying
                     const textarea = document.createElement('textarea');
                     textarea.value = text;
                     document.body.appendChild(textarea);

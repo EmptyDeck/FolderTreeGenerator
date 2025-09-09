@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>File List Generator</title>
+        <link rel="stylesheet" href="styles.css" />
+    </head>
+    <body>
+        <div class="container">
+            <h1>File List Generator</h1>
+
+            <div class="checkbox-group">
+                <label class="checkbox-label">
+                    <input
+                        type="checkbox"
+                        id="includeSubfolders"
+                        checked
+                    />
+                    <span>Include subfolders</span>
+                </label>
+            </div>
+
+            <div class="checkbox-group">
+                <label class="checkbox-label">
+                    <input type="checkbox" id="ignoreDotFiles" />
+                    <span>Ignore files starting with .</span>
+                </label>
+            </div>
+
+            <div class="input-group">
+                <label for="ignoreExtensions">
+                    Ignore extensions (comma-separated, e.g., txt,jpg)
+                </label>
+                <input
+                    type="text"
+                    id="ignoreExtensions"
+                />
+            </div>
+
+            <div class="button-group">
+                <button id="selectFolder">
+                    Select Folder & Generate List
+                </button>
+                <button id="resetOutput">
+                    Reset
+                </button>
+                <button id="copyOutput">
+                    Copy
+                </button>
+            </div>
+
+            <div class="folder-display">
+                <p id="selectedFolder">Select a folder</p>
+            </div>
+
+            <div class="output-section">
+                <div id="loadingSpinner"></div>
+                <pre id="output">No list generated.</pre>
+            </div>
+        </div>
+        <script src="script.js"></script>
+    </body>
+</html>
